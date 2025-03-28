@@ -8,49 +8,67 @@ const logger = log4js.getLogger('criteriaController'); // Logger for auth contro
 // @route   POST /api/criteria?role=member
 // @access  Private
 const addCriteria = asyncHandler(async (req, res, next) => {
-  const { role } = req.query;
+    const { role } = req.query;
 
-  let mappedData;
-  if (role === 'leader') {
-    mappedData = await Criteria.addManagerCriterias(req);
-  } else if (role === 'partner') {
-    mappedData = await Criteria.addCriterias(req);
-  } else {
-    return next(new ErrorResponse(`Criteria role must be provided`, 404));
-  }
+    let mappedData;
+    if (role === 'leader') {
+        mappedData = await Criteria.addManagerCriterias(req);
+    } else if (role === 'partner') {
+        mappedData = await Criteria.addCriterias(req);
+    } else {
+        return next(new ErrorResponse(`Criteria role must be provided`, 404));
+    }
 
-  res.json({ success: true, data: mappedData });
+    res.json({ success: true, data: mappedData });
 });
 
 // @desc    Get all criteria
 // @route   GET /api/criteria
 // @access  Private
 const getAllCriteria = asyncHandler(async (req, res, next) => {
-  const { role_id } = req.userData;
-  const isManager = role_id === 5;
+    const { role_id, member_title } = req.userData;
+    const isManager = role_id === 5;
+    let isDelivery = isManager
+        ? member_title.toLowerCase().includes('delivery')
+        : false;
 
-  const criteria = await Criteria.findAll(isManager);
+    const criteria = await Criteria.findAll(isManager, isDelivery);
 
-  res.json({ success: true, data: criteria });
+    res.json({ success: true, data: criteria });
+});
+
+// @desc    Get all criteria guidelines
+// @route   GET /api/criteria/guidelines
+// @access  Private
+const getAllCriteriaGuidelines = asyncHandler(async (req, res, next) => {
+    const { role_id } = req.userData;
+    const isManager = role_id === 5;
+
+    const criteria = await Criteria.findAllGuidelines(isManager);
+
+    res.json({ success: true, data: criteria });
 });
 
 // @desc    Get a criteria
 // @route   GET /api/criteria/:id
 // @access  Private
 const getCriteria = asyncHandler(async (req, res, next) => {
-  const { role_id } = req.userData;
-  const isManager = role_id === 5;
+    const { role_id } = req.userData;
+    const isManager = role_id === 5;
 
-  const criteria = await Criteria.find(req.params.id, isManager);
+    const criteria = await Criteria.find(req.params.id, isManager);
 
-  if (!criteria) {
-    logger.error(`Criteria not found with id of ${req.params.id}`);
-    return next(
-      new ErrorResponse(`Criteria not found with id of ${req.params.id}`, 404)
-    );
-  }
+    if (!criteria) {
+        logger.error(`Criteria not found with id of ${req.params.id}`);
+        return next(
+            new ErrorResponse(
+                `Criteria not found with id of ${req.params.id}`,
+                404
+            )
+        );
+    }
 
-  res.json({ success: true, data: criteria });
+    res.json({ success: true, data: criteria });
 });
 
 // @desc    Update a criteria
@@ -58,21 +76,24 @@ const getCriteria = asyncHandler(async (req, res, next) => {
 // @access  Private
 // Not Completed
 const updateCriteria = asyncHandler(async (req, res, next) => {
-  const criteria = await Criteria.find(req.params.id);
+    const criteria = await Criteria.find(req.params.id);
 
-  if (!criteria) {
-    logger.error(`Criteria not found with id of ${req.params.id}`);
+    if (!criteria) {
+        logger.error(`Criteria not found with id of ${req.params.id}`);
 
-    return next(
-      new ErrorResponse(`Criteria not found with id of ${req.params.id}`, 404)
-    );
-  }
+        return next(
+            new ErrorResponse(
+                `Criteria not found with id of ${req.params.id}`,
+                404
+            )
+        );
+    }
 
-  const updatedCriteria = new Criteria({ ...criteria, ...req.body });
+    const updatedCriteria = new Criteria({ ...criteria, ...req.body });
 
-  const mappedData = await updatedCriteria.update();
+    const mappedData = await updatedCriteria.update();
 
-  res.json({ success: true, data: mappedData });
+    res.json({ success: true, data: mappedData });
 });
 
 // @desc    Delete a criteria
@@ -80,45 +101,49 @@ const updateCriteria = asyncHandler(async (req, res, next) => {
 // @access  Private
 // Not Completed
 const deleteCriteria = asyncHandler(async (req, res, next) => {
-  const criteria = await Criteria.find(req.params.id);
+    const criteria = await Criteria.find(req.params.id);
 
-  if (!criteria) {
-    logger.error(`Criteria not found with id of ${req.params.id}`);
+    if (!criteria) {
+        logger.error(`Criteria not found with id of ${req.params.id}`);
 
-    return next(
-      new ErrorResponse(`Criteria not found with id of ${req.params.id}`, 404)
-    );
-  }
+        return next(
+            new ErrorResponse(
+                `Criteria not found with id of ${req.params.id}`,
+                404
+            )
+        );
+    }
 
-  await criteria.delete();
+    await criteria.delete();
 
-  res.json({ success: true, data: {} });
+    res.json({ success: true, data: {} });
 });
 
 // @desc   Get all criteria by category
 // @route  GET /api/criteria/category/:category
 // @access Private
 const getCriteriaByCategory = asyncHandler(async (req, res, next) => {
-  const criteria = await Criteria.findByCategory(req.body.category);
+    const criteria = await Criteria.findByCategory(req.body.category);
 
-  res.json({ success: true, data: criteria });
+    res.json({ success: true, data: criteria });
 });
 
 // @desc   Get all criteria by director approval
 // @route  GET /api/criteria/director/:director
 // @access Private
 const getCriteriaByDirector = asyncHandler(async (req, res, next) => {
-  const criteria = await Criteria.findByDirectorApproval(req.params.director);
+    const criteria = await Criteria.findByDirectorApproval(req.params.director);
 
-  res.json({ success: true, data: criteria });
+    res.json({ success: true, data: criteria });
 });
 
 module.exports = {
-  addCriteria,
-  getAllCriteria,
-  getCriteria,
-  updateCriteria,
-  deleteCriteria,
-  getCriteriaByCategory,
-  getCriteriaByDirector,
+    addCriteria,
+    getAllCriteria,
+    getCriteria,
+    updateCriteria,
+    deleteCriteria,
+    getCriteriaByCategory,
+    getCriteriaByDirector,
+    getAllCriteriaGuidelines,
 };

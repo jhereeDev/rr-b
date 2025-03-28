@@ -1,12 +1,13 @@
 const express = require('express');
 const {
-  addCriteria,
-  getAllCriteria,
-  getCriteria,
-  updateCriteria,
-  deleteCriteria,
-  getCriteriaByCategory,
-  getCriteriaByDirector,
+    addCriteria,
+    getAllCriteria,
+    getCriteria,
+    updateCriteria,
+    deleteCriteria,
+    getCriteriaByCategory,
+    getCriteriaByDirector,
+    getAllCriteriaGuidelines,
 } = require('../controllers/criteria_controller');
 const { authenticated } = require('../middlewares/auth');
 const multer = require('multer');
@@ -19,6 +20,7 @@ const upload = multer({ storage });
 
 router.post('/upload', authenticated, upload.single('excelFile'), addCriteria);
 router.get('/', authenticated, getAllCriteria);
+router.get('/guidelines', authenticated, getAllCriteriaGuidelines);
 router.post('/search/category', authenticated, getCriteriaByCategory);
 router.get('/:id', authenticated, getCriteria);
 router.put('/:id', authenticated, updateCriteria);
