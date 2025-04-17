@@ -11,6 +11,7 @@ class Criteria {
         points,
         guidelines,
         director_approval,
+        type = 'BOTH', // New field: BOTH, EXPERTS, DELIVERY
         isManager = false,
     }) {
         // Initialize the object properties
@@ -20,6 +21,7 @@ class Criteria {
         this.points = points;
         this.guidelines = guidelines;
         this.director_approval = director_approval;
+        this.type = type;
         this.isManager = isManager;
     }
 
@@ -29,6 +31,13 @@ class Criteria {
 
     static get managerTableName() {
         return 'managerrewardpointscriteria';
+    }
+
+    // Get tableName based on isManager flag
+    getTableName() {
+        return this.isManager
+            ? Criteria.managerTableName
+            : Criteria.memberTableName;
     }
 
     static async findAll(
@@ -66,115 +75,160 @@ class Criteria {
         return await database(tableName);
     }
 
-    // Method to add criterias to the database in bulk
+    // Method to add criterias to the database in bulk from Excel
     static async addCriterias(req) {
         const workbook = xlsx.read(req.file.buffer, { type: 'buffer' }); // Read directly from buffer
         const sheetName = workbook.SheetNames[0];
         const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
         const mappedData = sheetData.map((row) => ({
-            id: row['id'],
+            id: row['id'] || null,
             category: row['category'],
             accomplishment: row['accomplishment'],
-            points: row['points'],
+            points: parseInt(row['points']),
             guidelines: row['guidelines'],
             director_approval: boolean(row['director_approval']),
+            type: row['type'] || 'BOTH',
         }));
 
-        // mapped data and add to database
-        const table = new CriteriaTableSchema().getTable();
-        await database(table).insert(mappedData);
+        // Insert data into the member criteria table
+        await database(this.memberTableName).insert(mappedData);
 
         return mappedData;
     }
 
-    // Method to add criterias to the manager/leaders database in bulk
+    // Method to add criterias to the manager/leaders database in bulk from Excel
     static async addManagerCriterias(req) {
         const workbook = xlsx.read(req.file.buffer, { type: 'buffer' }); // Read directly from buffer
         const sheetName = workbook.SheetNames[0];
         const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
         const mappedData = sheetData.map((row) => ({
-            id: row['id'],
+            id: row['id'] || null,
             category: row['category'],
             accomplishment: row['accomplishment'],
-            points: row['points'],
+            points: parseInt(row['points']),
             guidelines: row['guidelines'],
             director_approval: boolean(row['director_approval']),
+            type: row['type'] || 'BOTH',
         }));
 
-        // mapped data and add to database
+        // Insert data into the manager criteria table
         await database(this.managerTableName).insert(mappedData);
 
         return mappedData;
     }
 
-    // Method to create a new criteria in the database
+    // Method to create a single new criteria
     async create() {
-        const table = new CriteriaTableSchema().getTable();
-        const data = Object.keys(this).map((key) => this[key]);
-        Object.keys(data).map((key) => {
-            if (data[key] === undefined) {
-                data[key] = null;
-            }
-        });
+        const tableName = this.getTableName();
 
-        return database(table).insert(this);
+        // Create a clean object with only the fields that should be in the database
+        const criteriaData = {
+            category: this.category,
+            accomplishment: this.accomplishment,
+            points: this.points,
+            guidelines: this.guidelines,
+            director_approval: this.director_approval,
+        };
+
+        // Only add type field if isManager is true
+        if (this.isManager) {
+            criteriaData.type = this.type || 'BOTH';
+        }
+
+        // Insert and return the ID
+        const [id] = await database(tableName).insert(criteriaData);
+        this.id = id;
+
+        return this;
     }
 
-    // Method to update an existing criteria in the database
+    // Method to update an existing criteria
     async update() {
-        const table = new CriteriaTableSchema().getTable();
-        const id = new CriteriaTableSchema().getId();
-        const data = Object.keys(this).map((key) => this[key]);
-        Object.keys(data).map((key) => {
-            if (data[key] === undefined) {
-                data[key] = null;
-            }
+        const tableName = this.getTableName();
+
+        if (!this.id) {
+            throw new Error('Cannot update criteria without an ID');
+        }
+
+        // Create a clean object with only the fields that should be updated
+        const criteriaData = {
+            category: this.category,
+            accomplishment: this.accomplishment,
+            points: this.points,
+            guidelines: this.guidelines,
+            director_approval: this.director_approval,
+        };
+
+        // Only add type field if isManager is true
+        if (this.isManager) {
+            criteriaData.type = this.type || 'BOTH';
+        }
+
+        // Remove undefined values
+        Object.keys(criteriaData).forEach((key) => {
+            if (criteriaData[key] === undefined) delete criteriaData[key];
         });
 
-        return database(table).where(id, this.id).update(this);
+        await database(tableName).where('id', this.id).update(criteriaData);
+
+        return this;
     }
 
-    // Method to delete an existing criteria from the database
+    // Method to delete an existing criteria
     async delete() {
-        const table = new CriteriaTableSchema().getTable();
-        const id = new CriteriaTableSchema().getId();
+        const tableName = this.getTableName();
 
-        return database(table).where(id, this.id).del();
+        if (!this.id) {
+            throw new Error('Cannot delete criteria without an ID');
+        }
+
+        return await database(tableName).where('id', this.id).del();
     }
 
+    // Method to find a criteria by ID
     static async find(id, isManager = false) {
         const tableName = isManager
             ? this.managerTableName
             : this.memberTableName;
         return await database(tableName).where('id', id).first();
     }
-    // Method to retrieve a criteria by category from the database
-    static async findByCategory(category) {
-        const options = new CriteriaTableSchema();
-        const table = options.getTable();
-        const categoryKey = options.getCategory();
 
-        const criterias = database
-            .select('*')
-            .from(table)
-            .where(options.get_key_value(categoryKey, category));
-
-        return criterias;
+    // Method to retrieve criteria by category
+    static async findByCategory(category, isManager = false) {
+        const tableName = isManager
+            ? this.managerTableName
+            : this.memberTableName;
+        return await database(tableName).where('category', category);
     }
 
-    // Method to retrieve a criteria by director approval from the database
-    static async findByDirectorApproval(director_approval) {
-        const table = new CriteriaTableSchema().getTable();
-        // const alias = new CriteriaTableSchema().get_alias();
-        const directorApprovalKey =
-            new CriteriaTableSchema().getDirectorApproval();
+    // Method to retrieve criteria by director approval
+    static async findByDirectorApproval(director_approval, isManager = false) {
+        const tableName = isManager
+            ? this.managerTableName
+            : this.memberTableName;
+        return await database(tableName).where(
+            'director_approval',
+            booleanToNumber(director_approval)
+        );
+    }
 
-        return database
-            .select('*')
-            .from(table)
-            .where(directorApprovalKey, booleanToNumber(director_approval));
+    // Method to retrieve criteria by type (EXPERTS, DELIVERY, BOTH)
+    static async findByType(type, isManager = false) {
+        if (!isManager) {
+            return next(
+                new ErrorResponse(
+                    'You are not authorized to view criteria by type',
+                    403
+                )
+            );
+        }
+        const tableName = this.managerTableName;
+
+        return await database(tableName)
+            .where('type', type)
+            .orWhere('type', 'BOTH');
     }
 }
 
@@ -190,6 +244,7 @@ class CriteriaTableSchema {
         const points = 'points';
         const guidelines = 'guidelines';
         const director_approval = 'director_approval';
+        const type = 'type';
         const alias = {
             id: 'id',
             category: 'category',
@@ -197,6 +252,7 @@ class CriteriaTableSchema {
             points: 'points',
             guidelines: 'guidelines',
             director_approval: 'director_approval',
+            type: 'type',
         };
 
         // Define getter methods for the table schema properties
@@ -207,6 +263,7 @@ class CriteriaTableSchema {
         this.getPoints = () => points;
         this.getGuidelines = () => guidelines;
         this.getDirectorApproval = () => director_approval;
+        this.getType = () => type;
         this.get_alias = function () {
             return Object.keys(alias).map((key) => `${key} as ${alias[key]}`);
         };
