@@ -7,6 +7,10 @@ const {
     getPartnerCriteria,
     updatePartnerCriteria,
     deletePartnerCriteria,
+    getPublishedPartnerCriteria,
+    getDraftPartnerCriteria,
+    publishPartnerCriteria,
+    publishAllPartnerCriteria,
 
     // Manager criteria operations
     addManagerCriterias,
@@ -15,6 +19,10 @@ const {
     getManagerCriteria,
     updateManagerCriteria,
     deleteManagerCriteria,
+    getPublishedManagerCriteria,
+    getDraftManagerCriteria,
+    publishManagerCriteria,
+    publishAllManagerCriteria,
 
     // Shared operations
     getAllCriteriaGuidelines,
@@ -64,6 +72,33 @@ router.post(
 // Route for getting all partner criteria
 router.get('/partner', authenticated, getAllPartnerCriteria);
 
+// Route for deleting a partner criteria
+router.delete(
+    '/partner/:id',
+    authenticated,
+    checkRole([1, 2]), // Admin and Super Admin only
+    deletePartnerCriteria
+);
+
+// Route for getting all published partner criteria
+router.get('/partner/published', authenticated, getPublishedPartnerCriteria);
+
+// Route for getting all draft partner criteria
+router.get(
+    '/partner/drafts',
+    authenticated,
+    checkRole([1, 2]), // Admin and Super Admin only
+    getDraftPartnerCriteria
+);
+
+// Route for publishing all draft partner criteria
+router.put(
+    '/partner/publish-all',
+    authenticated,
+    checkRole([1, 2]), // Admin and Super Admin only
+    publishAllPartnerCriteria
+);
+
 // Route for getting a single partner criteria by ID
 router.get('/partner/:id', authenticated, getPartnerCriteria);
 
@@ -75,12 +110,12 @@ router.put(
     updatePartnerCriteria
 );
 
-// Route for deleting a partner criteria
-router.delete(
-    '/partner/:id',
+// Route for publishing a single partner criteria
+router.put(
+    '/partner/:id/publish',
     authenticated,
     checkRole([1, 2]), // Admin and Super Admin only
-    deletePartnerCriteria
+    publishPartnerCriteria
 );
 
 // =============================================================
@@ -107,6 +142,33 @@ router.post(
 // Route for getting all manager criteria
 router.get('/manager', authenticated, getAllManagerCriteria);
 
+// Route for deleting a manager criteria
+router.delete(
+    '/manager/:id',
+    authenticated,
+    checkRole([1, 2]), // Admin and Super Admin only
+    deleteManagerCriteria
+);
+
+// Route for getting all published manager criteria
+router.get('/manager/published', authenticated, getPublishedManagerCriteria);
+
+// Route for getting all draft manager criteria
+router.get(
+    '/manager/drafts',
+    authenticated,
+    checkRole([1, 2]), // Admin and Super Admin only
+    getDraftManagerCriteria
+);
+
+// Route for publishing all draft manager criteria
+router.put(
+    '/manager/publish-all',
+    authenticated,
+    checkRole([1, 2]), // Admin and Super Admin only
+    publishAllManagerCriteria
+);
+
 // Route for getting a single manager criteria by ID
 router.get('/manager/:id', authenticated, getManagerCriteria);
 
@@ -118,12 +180,12 @@ router.put(
     updateManagerCriteria
 );
 
-// Route for deleting a manager criteria
-router.delete(
-    '/manager/:id',
+// Route for publishing a single manager criteria
+router.put(
+    '/manager/:id/publish',
     authenticated,
     checkRole([1, 2]), // Admin and Super Admin only
-    deleteManagerCriteria
+    publishManagerCriteria
 );
 
 // =============================================================

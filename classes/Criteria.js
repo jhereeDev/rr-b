@@ -13,6 +13,7 @@ class Criteria {
         director_approval,
         type = 'BOTH', // New field: BOTH, EXPERTS, DELIVERY
         isManager = false,
+        published = false, // New field: published status
     }) {
         // Initialize the object properties
         this.id = id;
@@ -23,6 +24,7 @@ class Criteria {
         this.director_approval = director_approval;
         this.type = type;
         this.isManager = isManager;
+        this.published = published;
     }
 
     static get memberTableName() {
@@ -43,13 +45,19 @@ class Criteria {
     static async findAll(
         isManager = false,
         isDelivery = false,
-        guidelines = false
+        guidelines = false,
+        publishedStatus = null
     ) {
         const tableName = isManager
             ? this.managerTableName
             : this.memberTableName;
 
         let query = database(tableName);
+
+        // Filter by published status if provided
+        if (publishedStatus !== null) {
+            query = query.where('published', publishedStatus);
+        }
 
         if (!guidelines) {
             if (isManager) {
@@ -130,6 +138,7 @@ class Criteria {
             points: this.points,
             guidelines: this.guidelines,
             director_approval: this.director_approval,
+            published: this.published || false, // Default to false if not provided
         };
 
         // Only add type field if isManager is true
@@ -160,6 +169,11 @@ class Criteria {
             guidelines: this.guidelines,
             director_approval: this.director_approval,
         };
+
+        // Add published field if it's defined
+        if (this.published !== undefined) {
+            criteriaData.published = this.published;
+        }
 
         // Only add type field if isManager is true
         if (this.isManager) {
@@ -230,6 +244,33 @@ class Criteria {
             .where('type', type)
             .orWhere('type', 'BOTH');
     }
+
+    // Method to find all published criteria
+    static async findPublished(isManager = false, isDelivery = false) {
+        return await this.findAll(isManager, isDelivery, false, true);
+    }
+
+    // Method to find all draft criteria
+    static async findDrafts(isManager = false, isDelivery = false) {
+        return await this.findAll(isManager, isDelivery, false, false);
+    }
+
+    // Method to publish a single criteria
+    async publish() {
+        this.published = true;
+        return await this.update();
+    }
+
+    // Static method to publish all draft criteria
+    static async publishAll(isManager = false) {
+        const tableName = isManager
+            ? this.managerTableName
+            : this.memberTableName;
+
+        return await database(tableName)
+            .where('published', false)
+            .update({ published: true });
+    }
 }
 
 // Define the CriteriaTable Schema class
@@ -245,6 +286,7 @@ class CriteriaTableSchema {
         const guidelines = 'guidelines';
         const director_approval = 'director_approval';
         const type = 'type';
+        const published = 'published';
         const alias = {
             id: 'id',
             category: 'category',
@@ -253,6 +295,7 @@ class CriteriaTableSchema {
             guidelines: 'guidelines',
             director_approval: 'director_approval',
             type: 'type',
+            published: 'published',
         };
 
         // Define getter methods for the table schema properties
@@ -264,6 +307,7 @@ class CriteriaTableSchema {
         this.getGuidelines = () => guidelines;
         this.getDirectorApproval = () => director_approval;
         this.getType = () => type;
+        this.getPublished = () => published;
         this.get_alias = function () {
             return Object.keys(alias).map((key) => `${key} as ${alias[key]}`);
         };

@@ -363,6 +363,120 @@ const deletePartnerCriteria = asyncHandler(async (req, res, next) => {
     }
 });
 
+// PUBLISHED CRITERIA OPERATIONS
+
+// @desc    Get all published partner criteria
+// @route   GET /api/criteria/partner/published
+// @access  Private
+const getPublishedPartnerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const criteria = await Criteria.findPublished();
+
+        res.status(200).json({
+            success: true,
+            count: criteria.length,
+            data: criteria,
+        });
+    } catch (error) {
+        logger.error(
+            `Error getting published partner criteria: ${error.message}`
+        );
+        return next(
+            new ErrorResponse(
+                `Failed to retrieve published partner criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
+// @desc    Get all draft partner criteria
+// @route   GET /api/criteria/partner/drafts
+// @access  Private (Admin, Super Admin)
+const getDraftPartnerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const criteria = await Criteria.findDrafts(false);
+        res.status(200).json({
+            success: true,
+            count: criteria.length,
+            data: criteria,
+        });
+    } catch (error) {
+        logger.error(`Error getting draft partner criteria: ${error.message}`);
+        return next(
+            new ErrorResponse(
+                `Failed to retrieve draft partner criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
+// @desc    Publish a single partner criteria
+// @route   PUT /api/criteria/partner/:id/publish
+// @access  Private (Admin, Super Admin)
+const publishPartnerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const existingCriteria = await Criteria.find(req.params.id, false);
+
+        if (!existingCriteria) {
+            logger.error(
+                `Partner criteria not found with id of ${req.params.id}`
+            );
+            return next(
+                new ErrorResponse(
+                    `Partner criteria not found with id of ${req.params.id}`,
+                    404
+                )
+            );
+        }
+
+        const criteria = new Criteria({
+            ...existingCriteria,
+            id: req.params.id,
+            isManager: false,
+        });
+
+        await criteria.publish();
+
+        res.status(200).json({
+            success: true,
+            data: await Criteria.find(req.params.id, false),
+        });
+    } catch (error) {
+        logger.error(`Error publishing partner criteria: ${error.message}`);
+        return next(
+            new ErrorResponse(
+                `Failed to publish partner criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
+// @desc    Publish all draft partner criteria
+// @route   PUT /api/criteria/partner/publish-all
+// @access  Private (Admin, Super Admin)
+const publishAllPartnerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const count = await Criteria.publishAll(false);
+
+        res.status(200).json({
+            success: true,
+            message: `${count} partner criteria published successfully`,
+            count,
+        });
+    } catch (error) {
+        logger.error(`Error publishing all partner criteria: ${error.message}`);
+        return next(
+            new ErrorResponse(
+                `Failed to publish all partner criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
 // MANAGER CRITERIA OPERATIONS
 
 // @desc    Add new manager criteria via Excel upload
@@ -595,6 +709,121 @@ const deleteManagerCriteria = asyncHandler(async (req, res, next) => {
     }
 });
 
+// @desc    Get all published manager criteria
+// @route   GET /api/criteria/manager/published
+// @access  Private
+const getPublishedManagerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const { member_title } = req.userData;
+        const isDelivery =
+            member_title && member_title.toLowerCase().includes('delivery');
+
+        const criteria = await Criteria.findPublished(true, isDelivery);
+        res.status(200).json({
+            success: true,
+            count: criteria.length,
+            data: criteria,
+        });
+    } catch (error) {
+        logger.error(
+            `Error getting published manager criteria: ${error.message}`
+        );
+        return next(
+            new ErrorResponse(
+                `Failed to retrieve published manager criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
+// @desc    Get all draft manager criteria
+// @route   GET /api/criteria/manager/drafts
+// @access  Private (Admin, Super Admin)
+const getDraftManagerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const criteria = await Criteria.findDrafts(true);
+        res.status(200).json({
+            success: true,
+            count: criteria.length,
+            data: criteria,
+        });
+    } catch (error) {
+        logger.error(`Error getting draft manager criteria: ${error.message}`);
+        return next(
+            new ErrorResponse(
+                `Failed to retrieve draft manager criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
+// @desc    Publish a single manager criteria
+// @route   PUT /api/criteria/manager/:id/publish
+// @access  Private (Admin, Super Admin)
+const publishManagerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const existingCriteria = await Criteria.find(req.params.id, true);
+
+        if (!existingCriteria) {
+            logger.error(
+                `Manager criteria not found with id of ${req.params.id}`
+            );
+            return next(
+                new ErrorResponse(
+                    `Manager criteria not found with id of ${req.params.id}`,
+                    404
+                )
+            );
+        }
+
+        const criteria = new Criteria({
+            ...existingCriteria,
+            id: req.params.id,
+            isManager: true,
+        });
+
+        await criteria.publish();
+
+        res.status(200).json({
+            success: true,
+            data: await Criteria.find(req.params.id, true),
+        });
+    } catch (error) {
+        logger.error(`Error publishing manager criteria: ${error.message}`);
+        return next(
+            new ErrorResponse(
+                `Failed to publish manager criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
+// @desc    Publish all draft manager criteria
+// @route   PUT /api/criteria/manager/publish-all
+// @access  Private (Admin, Super Admin)
+const publishAllManagerCriteria = asyncHandler(async (req, res, next) => {
+    try {
+        const count = await Criteria.publishAll(true);
+
+        res.status(200).json({
+            success: true,
+            message: `${count} manager criteria published successfully`,
+            count,
+        });
+    } catch (error) {
+        logger.error(`Error publishing all manager criteria: ${error.message}`);
+        return next(
+            new ErrorResponse(
+                `Failed to publish all manager criteria: ${error.message}`,
+                500
+            )
+        );
+    }
+});
+
 // SHARED OPERATIONS
 // @desc    Get all criteria guidelines (both manager and partner)
 // @route   GET /api/criteria/guidelines
@@ -720,6 +949,7 @@ const getCriteriaByType = asyncHandler(async (req, res, next) => {
         );
     }
 });
+
 module.exports = {
     // addCriteria,
     // getAllCriteria,
@@ -737,6 +967,10 @@ module.exports = {
     getPartnerCriteria,
     updatePartnerCriteria,
     deletePartnerCriteria,
+    getPublishedPartnerCriteria,
+    getDraftPartnerCriteria,
+    publishPartnerCriteria,
+    publishAllPartnerCriteria,
 
     // Manager criteria operations
     addManagerCriterias,
@@ -745,6 +979,10 @@ module.exports = {
     getManagerCriteria,
     updateManagerCriteria,
     deleteManagerCriteria,
+    getPublishedManagerCriteria,
+    getDraftManagerCriteria,
+    publishManagerCriteria,
+    publishAllManagerCriteria,
 
     // Shared operations
     getAllCriteriaGuidelines,
