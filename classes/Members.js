@@ -1,5 +1,10 @@
+// Enhanced version of Member.js class with better update handling
+
 const { database } = require('../config/db_config');
 const moment = require('moment');
+const { capitalizeEachWord } = require('../utils/helpers');
+const log4js = require('../config/log4js_config');
+const logger = log4js.getLogger('member');
 
 // Define the Member class
 class Member {
@@ -26,7 +31,7 @@ class Member {
     this.member_firstname = member_firstname;
     this.member_lastname = member_lastname;
     this.member_email = member_email;
-    this.member_title = member_title;
+    this.member_title = member_title ? capitalizeEachWord(member_title) : ''; // Apply proper capitalization
     this.member_manager_id = member_manager_id;
     this.member_director_id = member_director_id;
     this.role_id = role_id;
@@ -36,16 +41,28 @@ class Member {
   // Method to create a new member in the database
   async create() {
     try {
-      const result = await database(Member.tableName).insert(this);
+      logger.info(`Creating new member: ${this.member_employee_id} (${this.member_firstname} ${this.member_lastname})`);
+      
+      // Format title with proper capitalization
+      if (this.member_title) {
+        this.member_title = capitalizeEachWord(this.member_title);
+      }
+      
+      const result = await database(Member.tableName).insert({
+        ...this,
+        created_at: moment().format('YYYY-MM-DD HH:mm:ss'),
+        updated_at: moment().format('YYYY-MM-DD HH:mm:ss')
+      });
 
       if (!result || !result.length) {
         throw new Error('Error creating member');
       }
 
       this.id = result[0];
+      logger.info(`Successfully created member: ${this.member_employee_id}`);
       return this;
     } catch (error) {
-      console.error('Error creating member: ', error);
+      logger.error(`Error creating member ${this.member_employee_id}: ${error.message}`);
       throw new Error(`Error creating member: ${error.message}`);
     }
   }
@@ -54,19 +71,65 @@ class Member {
   async update() {
     try {
       const memberEmployeeId = this.member_employee_id;
+      logger.info(`Updating member: ${memberEmployeeId} (${this.member_firstname} ${this.member_lastname})`);
+      
+      // Format title with proper capitalization
+      if (this.member_title) {
+        this.member_title = capitalizeEachWord(this.member_title);
+      }
+      
+      // Create update object with only fields to be updated
+      const updateData = { 
+        ...this,
+        updated_at: moment().format('YYYY-MM-DD HH:mm:ss')
+      };
+      
+      // Remove ID field as it shouldn't be updated
+      delete updateData.id;
+      
       const result = await database(Member.tableName)
         .where('member_employee_id', memberEmployeeId)
-        .update(this);
+        .update(updateData);
 
       if (!result) {
         throw new Error('Error updating member');
       }
 
+      logger.info(`Successfully updated member: ${memberEmployeeId}`);
       return this;
     } catch (error) {
-      console.error('Error updating member: ', error);
+      logger.error(`Error updating member ${this.member_employee_id}: ${error.message}`);
       throw new Error(`Error updating member: ${error.message}`);
     }
+  }
+
+  /**
+   * Compare two member objects to check if their data is different
+   * Returns true if there are differences, false if objects are identical
+   */
+  static compareMembers(existing, updated) {
+    // List of fields to compare
+    const fieldsToCompare = [
+      'member_username',
+      'member_firstname',
+      'member_lastname',
+      'member_email',
+      'member_title',
+      'member_manager_id',
+      'member_director_id',
+      'role_id',
+      'member_status',
+    ];
+    
+    // Check each field for differences
+    for (const field of fieldsToCompare) {
+      if (existing[field] !== updated[field]) {
+        logger.debug(`Field '${field}' has changed: '${existing[field]}' -> '${updated[field]}'`);
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   // Method to get all members
@@ -74,7 +137,7 @@ class Member {
     try {
       return await database(Member.tableName);
     } catch (error) {
-      console.error('Error in finding all members: ', error);
+      logger.error(`Error in finding all members: ${error.message}`);
       throw new Error(`Error in finding all members: ${error.message}`);
     }
   }
@@ -83,6 +146,7 @@ class Member {
   static async findByMemberId(memberEmployeeId) {
     try {
       if (!memberEmployeeId) {
+        logger.warn('Member employee ID is required');
         throw new Error('Member employee ID is required');
       }
 
@@ -99,7 +163,7 @@ class Member {
 
       return member;
     } catch (error) {
-      console.error('Error finding member by ID:', error);
+      logger.error(`Error finding member by ID ${memberEmployeeId}: ${error.message}`);
       throw new Error(`Error finding member by ID: ${error.message}`);
     }
   }
@@ -118,7 +182,7 @@ class Member {
 
       return member;
     } catch (error) {
-      console.error('Error finding member by username: ', error);
+      logger.error(`Error finding member by username ${username}: ${error.message}`);
       throw new Error(`Error finding member by username: ${error.message}`);
     }
   }
@@ -136,7 +200,7 @@ class Member {
 
       return member;
     } catch (error) {
-      console.error('Error finding member by email: ', error);
+      logger.error(`Error finding member by email ${email}: ${error.message}`);
       throw new Error(`Error finding member by email: ${error.message}`);
     }
   }
@@ -150,7 +214,7 @@ class Member {
 
       return members;
     } catch (error) {
-      console.error('Error finding members by role ID: ', error);
+      logger.error(`Error finding members by role ID ${roleId}: ${error.message}`);
       throw new Error(`Error finding members by role ID: ${error.message}`);
     }
   }
@@ -158,11 +222,13 @@ class Member {
   // Method to get all members by manager id
   static async findByManagerId(managerId) {
     try {
-      await database(Member.tableName)
+      const members = await database(Member.tableName)
         .where('member_manager_id', managerId)
         .andWhere('member_status', 'LIKE', 'ACTIVE');
+      
+      return members;
     } catch (error) {
-      console.error('Error finding members by manager ID: ', error);
+      logger.error(`Error finding members by manager ID ${managerId}: ${error.message}`);
       throw new Error(`Error finding members by manager ID: ${error.message}`);
     }
   }
@@ -180,7 +246,7 @@ class Member {
 
       return { managers, members };
     } catch (error) {
-      console.error('Error finding members by director ID: ', error);
+      logger.error(`Error finding members by director ID ${directorId}: ${error.message}`);
       throw new Error(`Error finding members by director ID: ${error.message}`);
     }
   }
@@ -194,7 +260,7 @@ class Member {
           logout_time: moment().format('YYYY-MM-DD HH:mm:ss'),
         });
     } catch (error) {
-      console.error('Error updating logout time: ', error);
+      logger.error(`Error updating logout time for ${memberEmployeeId}: ${error.message}`);
       throw new Error(`Error updating logout time: ${error.message}`);
     }
   }
@@ -208,7 +274,7 @@ class Member {
           login_time: moment().format('YYYY-MM-DD HH:mm:ss'),
         });
     } catch (error) {
-      console.error('Error updating login time: ', error);
+      logger.error(`Error updating login time for ${memberEmployeeId}: ${error.message}`);
       throw new Error(`Error updating login time: ${error.message}`);
     }
   }
@@ -246,7 +312,7 @@ class Member {
           hidePopup: 1,
         });
     } catch (error) {
-      console.error('Error updating hide popup: ', error);
+      logger.error(`Error updating hide popup for ${member_employee_id}: ${error.message}`);
       throw new Error(`Error updating hide popup: ${error.message}`);
     }
   }

@@ -91,6 +91,19 @@ const formattedDate = (date) => {
   return moment(date, 'MM/DD/YYYY').format('YYYY-MM-DD');
 };
 
+/**
+ * Capitalize each word in a string
+ * Convert "MANAGER CONSULTING DELIVERY" -> "Manager Consulting Delivery"
+ */
+const capitalizeEachWord = (string) => {
+  if (!string) return '';
+  return string
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
 module.exports = {
   boolean,
   booleanToNumber,
@@ -101,4 +114,5 @@ module.exports = {
   generateSlug,
   capitalize,
   formattedDate,
+  capitalizeEachWord,
 };

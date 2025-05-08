@@ -78,96 +78,170 @@ const search_member = asyncHandler(async (req, res, next) => {
 // @route     POST /api/users/map
 const map_members = asyncHandler(async (req, res, next) => {
   const { placeholder } = req.body;
-
+  const batchSize = 5; // Process members in small batches
+  const batchDelay = 2000; // 2 seconds delay between batches
+  
   try {
+    // Create a single LDAP client connection for the entire operation
     const client = await LDAP_Connection(LDAP_USERNAME, LDAP_PASSWORD);
+    if (!client) {
+      logger.error('Failed to connect to LDAP server');
+      return next(new ErrorResponse('Failed to connect to LDAP server', 500));
+    }
+    
+    // Search for members matching the placeholder (DIRECTOR, MANAGER, CONSULTANT)
     let results = await Ldap.mapMembersByPosition(client, placeholder);
-    const responses = [];
+    
+    logger.info(`Found ${results.length} members matching placeholder: ${placeholder}`);
+    
+    // Prepare tracking arrays
+    const responseData = {
+      success: true,
+      message: `Processing ${results.length} members in batches of ${batchSize}`,
+      totalMembers: results.length,
+      batchSize: batchSize,
+      batchDelay: `${batchDelay}ms`,
+      created: [],
+      updated: [],
+      skipped: [],
+      failed: []
+    };
 
-    await Promise.all(
-      results.map(async (result) => {
-        const mapMember = await Ldap.getMemberInfo(client, result.cn);
-
-        const newMember = new Member(mapMember.member);
-        const newManager = new Member(mapMember.manager);
-        const newDirector = new Member(mapMember.director);
-
-        try {
-          // Fixed: Check correct IDs for each member type
-          const checknewMember = await Member.findByMemberId(
-            mapMember.member.member_employee_id
-          );
-          const checknewManager = await Member.findByMemberId(
-            mapMember.manager.member_employee_id
-          );
-          const checknewDirector = await Member.findByMemberId(
-            mapMember.director.member_employee_id
-          );
-
-          // Create/update member
-          if (!checknewMember) {
-            await newMember.create();
-          } else {
-            await newMember.update();
-          }
-
-          // Only create/update manager if different from member
-          if (
-            mapMember.manager.member_employee_id !==
-            mapMember.member.member_employee_id
-          ) {
-            if (!checknewManager) {
-              await newManager.create();
-            } else {
-              await newManager.update();
+    // Process members in batches with delays
+    for (let i = 0; i < results.length; i += batchSize) {
+      const batch = results.slice(i, i + batchSize);
+      logger.info(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(results.length/batchSize)}`);
+      
+      // Process each member in the current batch
+      await Promise.all(
+        batch.map(async (result) => {
+          try {
+            // Get full member info including manager and director hierarchy
+            const mapMember = await Ldap.getMemberInfo(client, result.cn);
+            
+            // Format the title properly for all entries
+            if (mapMember.member && mapMember.member.member_title) {
+              mapMember.member.member_title = capitalizeEachWord(mapMember.member.member_title);
             }
-          }
-
-          // Only create/update director if different from member and manager
-          if (
-            mapMember.director.member_employee_id !==
-              mapMember.member.member_employee_id &&
-            mapMember.director.member_employee_id !==
-              mapMember.manager.member_employee_id
-          ) {
-            if (!checknewDirector) {
-              await newDirector.create();
-            } else {
-              await newDirector.update();
+            if (mapMember.manager && mapMember.manager.member_title) {
+              mapMember.manager.member_title = capitalizeEachWord(mapMember.manager.member_title);
             }
+            if (mapMember.director && mapMember.director.member_title) {
+              mapMember.director.member_title = capitalizeEachWord(mapMember.director.member_title);
+            }
+
+            // Create Member objects
+            const newMember = new Member(mapMember.member);
+            const newManager = new Member(mapMember.manager);
+            const newDirector = new Member(mapMember.director);
+
+            // Process member
+            const memberStatus = await processMember(newMember, responseData);
+            
+            // Only process manager if different from member
+            if (
+              mapMember.manager.member_employee_id !== 
+              mapMember.member.member_employee_id
+            ) {
+              await processMember(newManager, responseData);
+            }
+
+            // Only process director if different from member and manager
+            if (
+              mapMember.director.member_employee_id !== mapMember.member.member_employee_id &&
+              mapMember.director.member_employee_id !== mapMember.manager.member_employee_id
+            ) {
+              await processMember(newDirector, responseData);
+            }
+
+          } catch (error) {
+            logger.error(`Error processing member ${result.cn}: ${error.message}`);
+            responseData.failed.push({
+              cn: result.cn,
+              error: error.message
+            });
           }
+        })
+      );
 
-          responses.push({
-            success: true,
-            member: mapMember.member.member_employee_id,
-            manager: mapMember.manager.member_employee_id,
-            director: mapMember.director.member_employee_id,
-          });
-        } catch (error) {
-          logger.error(
-            `Error processing member ${mapMember.member.member_employee_id}: ${error}`
-          );
-          responses.push({
-            success: false,
-            member: mapMember.member.member_employee_id,
-            error: error.message,
-          });
-        }
-      })
-    );
+      // Add delay between batches (but not after the last batch)
+      if (i + batchSize < results.length) {
+        logger.info(`Batch complete. Waiting ${batchDelay}ms before next batch...`);
+        await new Promise(resolve => setTimeout(resolve, batchDelay));
+      }
+    }
 
-    res.status(200).json({
-      message: 'Mapping members success',
-      count: responses.length,
-      responses,
-    });
-
+    // Complete the operation
+    logger.info('Member mapping completed successfully');
     client.unbind();
+    
+    res.status(200).json({
+      message: 'Member mapping completed successfully',
+      stats: {
+        total: results.length,
+        created: responseData.created.length,
+        updated: responseData.updated.length,
+        skipped: responseData.skipped.length,
+        failed: responseData.failed.length
+      },
+      details: responseData
+    });
   } catch (error) {
-    logger.error(error);
-    return next(new ErrorResponse(error, 400));
+    logger.error(`Error in member mapping: ${error.message}`);
+    return next(new ErrorResponse(error.message, 400));
   }
 });
+
+/**
+ * Helper function to process a single member
+ * Checks if member exists, compares data, and creates/updates as needed
+ */
+async function processMember(memberObj, responseData) {
+  try {
+    // Check if member already exists in database
+    const existingMember = await Member.findByMemberId(
+      memberObj.member_employee_id
+    );
+
+    if (!existingMember) {
+      // Create new member
+      await memberObj.create();
+      responseData.created.push({
+        id: memberObj.member_employee_id,
+        name: `${memberObj.member_firstname} ${memberObj.member_lastname}`
+      });
+      return 'created';
+    } else {
+      // Check if data needs updating by comparing key fields
+      const needsUpdate = 
+        existingMember.member_firstname !== memberObj.member_firstname ||
+        existingMember.member_lastname !== memberObj.member_lastname ||
+        existingMember.member_title !== memberObj.member_title ||
+        existingMember.member_email !== memberObj.member_email ||
+        existingMember.member_manager_id !== memberObj.member_manager_id ||
+        existingMember.member_director_id !== memberObj.member_director_id;
+      
+      if (needsUpdate) {
+        // Update existing member with new data
+        await memberObj.update();
+        responseData.updated.push({
+          id: memberObj.member_employee_id,
+          name: `${memberObj.member_firstname} ${memberObj.member_lastname}`
+        });
+        return 'updated';
+      } else {
+        // Skip if no changes needed
+        responseData.skipped.push({
+          id: memberObj.member_employee_id,
+          name: `${memberObj.member_firstname} ${memberObj.member_lastname}`
+        });
+        return 'skipped';
+      }
+    }
+  } catch (error) {
+    throw error;
+  }
+}
 
 // @desc      Get all members
 // @route     GET /api/users

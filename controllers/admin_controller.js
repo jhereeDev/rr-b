@@ -4,7 +4,7 @@ const Admin = require('../classes/Admin');
 const ErrorResponse = require('../utils/error_response');
 const log4js = require('../config/log4js_config');
 const logger = log4js.getLogger('adminController');
-const { hashPlainPass } = require('../utils/cypher');
+const { hashPlainPass, compareHash } = require('../utils/cypher');
 
 // @desc    Get all admin users
 // @route   GET /api/admin/users
@@ -136,11 +136,22 @@ const updateAdminStatus = asyncHandler(async (req, res, next) => {
 const resetAdminPassword = asyncHandler(async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { password } = req.body;
+    const { oldPassword, newPassword, confirmPassword } = req.body;
     
-    // Validate password
-    if (!password || password.length < 8) {
-      return next(new ErrorResponse('Password must be at least 8 characters', 400));
+    // Validate all required fields
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return next(new ErrorResponse('Please provide old password, new password and confirm password', 400));
+    }
+
+    // Validate password confirmation
+    if (newPassword !== confirmPassword) {
+      return next(new ErrorResponse('New password and confirm password do not match', 400));
+    }
+
+    // Validate password format
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return next(new ErrorResponse('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character', 400));
     }
     
     // Get admin by ID
@@ -148,10 +159,16 @@ const resetAdminPassword = asyncHandler(async (req, res, next) => {
     if (!admin) {
       return next(new ErrorResponse('Admin not found', 404));
     }
+
+    // Verify old password using compareHash
+    const isValidPassword = await compareHash(oldPassword, admin.password);
+    if (!isValidPassword) {
+      return next(new ErrorResponse('Old password is incorrect', 401));
+    }
     
     // Update password
-    const hashedPassword = hashPlainPass(password);
-    await Admin.updatePassword(id, hashedPassword);
+    const hashedNewPassword = hashPlainPass(newPassword);
+    await Admin.updatePassword(id, hashedNewPassword);
     
     res.status(200).json({
       success: true,
