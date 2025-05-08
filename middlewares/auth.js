@@ -2,6 +2,8 @@ const jwt = require('../utils/jwt');
 const { database } = require('../config/db_config');
 const { loginIV, decrypt: cDecrypt } = require('../utils/cypher');
 const Member = require('../classes/Members');
+const Admin = require('../classes/Admin');
+
 
 // Middleware to check if the user is already logged in
 const alreadyLogin = (req, res, next) => {
@@ -66,7 +68,12 @@ const authenticated = (req, res, next) => {
       .then(async (data) => {
         // If the token is valid, set the user data and proceed to the next middleware
         if (data) {
-          req.userData = await Member.findByMemberId(data.member_employee_id);
+          if(data.role_id === 1){
+            req.userData = await Admin.findByUsername(data.member_username);
+            
+          }else{
+            req.userData = await Member.findByMemberId(data.member_employee_id);
+          }
           next();
         } else {
           // If the token is not valid, send an unauthorized response
@@ -137,4 +144,24 @@ const checkRole = (requiredlvl = []) => {
     }
   };
 };
-module.exports = { alreadyLogin, authenticated, checkRole };
+
+// Middleware to check if the user is an admin
+const checkAdminRole = (req, res, next) => {
+  try {
+    // Get the user data from the request
+    let data = req.userData;
+    
+    // Check if the user has the isAdmin flag or role_id 1
+    if (data?.isAdmin || data?.role_id === 1) {
+      return next();
+    }
+    
+    // If not an admin, send an access denied response
+    return res.status(403).send({ error: true, message: 'Admin Access Denied.' });
+  } catch (error) {
+    // If there is an error in the middleware, proceed to the next middleware with the error
+    return next(error);
+  }
+};
+
+module.exports = { alreadyLogin, authenticated, checkRole, checkAdminRole };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const MemberController = require('../controllers/member_controller');
-const { authenticated, checkRole } = require('../middlewares/auth');
+const { authenticated, checkRole, checkAdminRole } = require('../middlewares/auth');
 
 /**
  * Member Routes
@@ -12,7 +12,7 @@ const { authenticated, checkRole } = require('../middlewares/auth');
 router.post(
     '/',
     authenticated,
-    checkRole([1, 2]),
+    checkAdminRole,
     MemberController.createMember
 );
 
@@ -20,7 +20,7 @@ router.post(
 router.get(
     '/',
     authenticated,
-    checkRole([1, 2]),
+    checkAdminRole,
     MemberController.getAllMembers
 );
 
@@ -28,7 +28,7 @@ router.get(
 router.post(
     '/search',
     authenticated,
-    checkRole([1, 2, 3, 4, 5]),
+    checkRole([4, 5]),
     MemberController.searchMembers
 );
 
@@ -36,7 +36,7 @@ router.post(
 router.post(
     '/map-hierarchy',
     authenticated,
-    checkRole([1, 2]),
+    checkAdminRole,
     MemberController.mapMembersHierarchy
 );
 
@@ -44,7 +44,7 @@ router.post(
 router.get(
     '/role/:role_id',
     authenticated,
-    checkRole([1, 2, 3, 4, 5, 6]),
+    checkRole([4, 5, 6]),
     MemberController.getByRoleId
 );
 
@@ -52,7 +52,7 @@ router.get(
 router.get(
     '/by-manager',
     authenticated,
-    checkRole([1, 5]),
+    checkRole([5]),
     MemberController.getByCurrentManager
 );
 
@@ -68,7 +68,7 @@ router.get(
 router.post(
     '/hide-popup',
     authenticated,
-    checkRole([1, 2, 3, 4, 5, 6]),
+    checkRole([4, 5, 6]),
     MemberController.hidePopup
 );
 
@@ -76,21 +76,21 @@ router.post(
 router.get(
     '/:id',
     authenticated,
-    checkRole([1, 2]),
+    checkAdminRole,
     MemberController.getMemberById
 );
 
 router.put(
     '/:id',
     authenticated,
-    checkRole([1, 2]),
+    checkAdminRole,
     MemberController.updateMember
 );
 
 router.delete(
     '/:id',
     authenticated,
-    checkRole([1, 2]),
+    checkAdminRole,
     MemberController.deleteMember
 );
 

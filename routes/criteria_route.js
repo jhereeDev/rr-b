@@ -87,7 +87,6 @@ router.get('/partner/published', authenticated, getPublishedPartnerCriteria);
 router.get(
     '/partner/drafts',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     getDraftPartnerCriteria
 );
 
@@ -95,7 +94,6 @@ router.get(
 router.put(
     '/partner/publish-all',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     publishAllPartnerCriteria
 );
 
@@ -106,7 +104,6 @@ router.get('/partner/:id', authenticated, getPartnerCriteria);
 router.put(
     '/partner/:id',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     updatePartnerCriteria
 );
 
@@ -114,7 +111,6 @@ router.put(
 router.put(
     '/partner/:id/publish',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     publishPartnerCriteria
 );
 
@@ -126,7 +122,6 @@ router.put(
 router.post(
     '/manager/upload',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     upload.single('excelFile'),
     addManagerCriterias
 );
@@ -135,7 +130,6 @@ router.post(
 router.post(
     '/manager',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     addManagerCriteria
 );
 
@@ -146,7 +140,6 @@ router.get('/manager', authenticated, getAllManagerCriteria);
 router.delete(
     '/manager/:id',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     deleteManagerCriteria
 );
 
@@ -157,7 +150,6 @@ router.get('/manager/published', authenticated, getPublishedManagerCriteria);
 router.get(
     '/manager/drafts',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     getDraftManagerCriteria
 );
 
@@ -165,7 +157,6 @@ router.get(
 router.put(
     '/manager/publish-all',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     publishAllManagerCriteria
 );
 
@@ -176,7 +167,6 @@ router.get('/manager/:id', authenticated, getManagerCriteria);
 router.put(
     '/manager/:id',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     updateManagerCriteria
 );
 
@@ -184,7 +174,6 @@ router.put(
 router.put(
     '/manager/:id/publish',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
     publishManagerCriteria
 );
 
@@ -209,7 +198,7 @@ router.get(
 router.get(
     '/type/:type',
     authenticated,
-    checkRole([1, 2, 5]),
+    checkRole([5]),
     getCriteriaByType
 );
 
@@ -220,7 +209,7 @@ router.get(
 // These routes maintain backward compatibility with existing code
 router.get('/', authenticated, getAllPartnerCriteria);
 router.get('/:id', authenticated, getPartnerCriteria);
-router.put('/:id', authenticated, checkRole([1, 2]), updatePartnerCriteria);
-router.delete('/:id', authenticated, checkRole([1, 2]), deletePartnerCriteria);
+router.put('/:id', authenticated,  updatePartnerCriteria);
+router.delete('/:id', authenticated, deletePartnerCriteria);
 
 module.exports = router;

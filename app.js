@@ -23,6 +23,7 @@ const leaderboards = require('./routes/leaderboards_route');
 const approval = require('./routes/approval_route');
 const consent = require('./routes/consent_route');
 const memberRoute = require('./routes/member_route');
+const adminRoute = require('./routes/admin_route');
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -52,6 +53,7 @@ app.use('/api/leaderboards', leaderboards);
 app.use('/api/approval', approval);
 app.use('/api/consent', consent);
 app.use('/api/members', memberRoute);
+app.use('/api/admins', adminRoute);
 app.use(errorHandler);
 
 const uploadsDir = path.join(__dirname, 'uploads');
