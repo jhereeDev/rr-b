@@ -30,7 +30,7 @@ const {
     getCriteriaByDirectorApproval,
     getCriteriaByType,
 } = require('../controllers/criteria_controller');
-const { authenticated, checkRole } = require('../middlewares/auth');
+const { authenticated, checkRole, checkAdminRole } = require('../middlewares/auth');
 const multer = require('multer');
 
 const router = express.Router();
@@ -56,7 +56,7 @@ const upload = multer({ storage });
 router.post(
     '/partner/upload',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
+    checkAdminRole, // Admin and Super Admin only
     upload.single('excelFile'),
     addPartnerCriterias
 );
@@ -65,7 +65,7 @@ router.post(
 router.post(
     '/partner',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
+    checkAdminRole, // Admin and Super Admin only
     addPartnerCriteria
 );
 
@@ -76,7 +76,7 @@ router.get('/partner', authenticated, getAllPartnerCriteria);
 router.delete(
     '/partner/:id',
     authenticated,
-    checkRole([1, 2]), // Admin and Super Admin only
+    checkAdminRole, // Admin and Super Admin only
     deletePartnerCriteria
 );
 
@@ -122,6 +122,7 @@ router.put(
 router.post(
     '/manager/upload',
     authenticated,
+    checkAdminRole, // Admin and Super Admin only
     upload.single('excelFile'),
     addManagerCriterias
 );
@@ -130,6 +131,7 @@ router.post(
 router.post(
     '/manager',
     authenticated,
+    checkAdminRole, // Admin and Super Admin only
     addManagerCriteria
 );
 
@@ -140,6 +142,7 @@ router.get('/manager', authenticated, getAllManagerCriteria);
 router.delete(
     '/manager/:id',
     authenticated,
+    checkAdminRole, // Admin and Super Admin only
     deleteManagerCriteria
 );
 
@@ -209,7 +212,7 @@ router.get(
 // These routes maintain backward compatibility with existing code
 router.get('/', authenticated, getAllPartnerCriteria);
 router.get('/:id', authenticated, getPartnerCriteria);
-router.put('/:id', authenticated,  updatePartnerCriteria);
-router.delete('/:id', authenticated, deletePartnerCriteria);
+router.put('/:id', authenticated, checkAdminRole, updatePartnerCriteria);
+router.delete('/:id', authenticated, checkAdminRole, deletePartnerCriteria);
 
 module.exports = router;

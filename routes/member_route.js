@@ -16,6 +16,14 @@ router.post(
     MemberController.createMember
 );
 
+// Create member by email (Admin/Super Admin only)
+router.post(
+    '/by-email',
+    authenticated,
+    checkAdminRole,
+    MemberController.createMemberByEmail
+);
+
 // Get all members (Admin/Super Admin only)
 router.get(
     '/',

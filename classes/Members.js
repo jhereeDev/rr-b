@@ -1,4 +1,4 @@
-// Enhanced version of Member.js class with better update handling
+// Enhanced version of Member.js class with email search functionality
 
 const { database } = require('../config/db_config');
 const moment = require('moment');
@@ -187,11 +187,16 @@ class Member {
     }
   }
 
+  // Method to find a member by their email
   static async findByEmail(email) {
     try {
+      if (!email) {
+        logger.warn('Email is required');
+        throw new Error('Email is required');
+      }
+
       const member = await database(Member.tableName)
         .where('member_email', email)
-        .andWhere('member_status', '=', 'ACTIVE')
         .first();
 
       if (member) {
@@ -210,7 +215,7 @@ class Member {
     try {
       const members = await database(Member.tableName)
         .where('role_id', roleId)
-        .andWhere('member_status', 'LIKE', 'ACTIVE');
+        .andWhere('member_status', 'ACTIVE');
 
       return members;
     } catch (error) {
@@ -224,7 +229,7 @@ class Member {
     try {
       const members = await database(Member.tableName)
         .where('member_manager_id', managerId)
-        .andWhere('member_status', 'LIKE', 'ACTIVE');
+        .andWhere('member_status', 'ACTIVE');
       
       return members;
     } catch (error) {
@@ -238,11 +243,11 @@ class Member {
     try {
       const managers = await database(Member.tableName)
         .where('member_manager_id', directorId)
-        .andWhere('member_status', 'LIKE', 'ACTIVE');
+        .andWhere('member_status', 'ACTIVE');
 
       const members = await database(Member.tableName)
         .where('member_director_id', directorId)
-        .andWhere('member_status', 'LIKE', 'ACTIVE');
+        .andWhere('member_status', 'ACTIVE');
 
       return { managers, members };
     } catch (error) {

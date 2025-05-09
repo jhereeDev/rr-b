@@ -168,6 +168,7 @@ const addPartnerCriteria = asyncHandler(async (req, res, next) => {
             points,
             guidelines,
             director_approval,
+            remarks,
             type,
         } = req.body;
 
@@ -189,6 +190,7 @@ const addPartnerCriteria = asyncHandler(async (req, res, next) => {
                 director_approval === true || director_approval === 'true',
             type: type || 'BOTH',
             isManager: false,
+            remarks,
         });
 
         await criteria.create();
@@ -286,6 +288,7 @@ const updatePartnerCriteria = asyncHandler(async (req, res, next) => {
             points,
             guidelines,
             director_approval,
+            remarks,
         } = req.body;
 
         const updateData = {
@@ -302,6 +305,7 @@ const updatePartnerCriteria = asyncHandler(async (req, res, next) => {
                     ? director_approval === true || director_approval === 'true'
                     : existingCriteria.director_approval,
             isManager: false,
+            remarks,
         };
 
         const criteria = new Criteria(updateData);
@@ -509,6 +513,7 @@ const addManagerCriteria = asyncHandler(async (req, res, next) => {
             guidelines,
             director_approval,
             type,
+            remarks,
         } = req.body;
 
         if (!category || !accomplishment || !points) {
@@ -529,6 +534,7 @@ const addManagerCriteria = asyncHandler(async (req, res, next) => {
                 director_approval === true || director_approval === 'true',
             type: type || 'BOTH',
             isManager: true,
+            remarks,
         });
 
         await criteria.create();
@@ -631,6 +637,7 @@ const updateManagerCriteria = asyncHandler(async (req, res, next) => {
             guidelines,
             director_approval,
             type,
+            remarks,
         } = req.body;
 
         const updateData = {
@@ -648,6 +655,7 @@ const updateManagerCriteria = asyncHandler(async (req, res, next) => {
                     : existingCriteria.director_approval,
             type: type || existingCriteria.type || 'BOTH',
             isManager: true,
+            remarks,
         };
 
         const criteria = new Criteria(updateData);

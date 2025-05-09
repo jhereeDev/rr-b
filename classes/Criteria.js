@@ -11,6 +11,7 @@ class Criteria {
         points,
         guidelines,
         director_approval,
+        remarks,    
         type = 'BOTH', // New field: BOTH, EXPERTS, DELIVERY
         isManager = false,
         published = false, // New field: published status
@@ -22,6 +23,7 @@ class Criteria {
         this.points = points;
         this.guidelines = guidelines;
         this.director_approval = director_approval;
+        this.remarks = remarks;
         this.type = type;
         this.isManager = isManager;
         this.published = published;
@@ -96,6 +98,7 @@ class Criteria {
             points: parseInt(row['points']),
             guidelines: row['guidelines'],
             director_approval: boolean(row['director_approval']),
+            remarks: row['remarks'],
             type: row['type'] || 'BOTH',
         }));
 
@@ -119,6 +122,7 @@ class Criteria {
             guidelines: row['guidelines'],
             director_approval: boolean(row['director_approval']),
             type: row['type'] || 'BOTH',
+            remarks: row['remarks'],
         }));
 
         // Insert data into the manager criteria table
@@ -139,6 +143,7 @@ class Criteria {
             guidelines: this.guidelines,
             director_approval: this.director_approval,
             published: this.published || false, // Default to false if not provided
+            remarks: this.remarks,
         };
 
         // Only add type field if isManager is true
@@ -168,6 +173,7 @@ class Criteria {
             points: this.points,
             guidelines: this.guidelines,
             director_approval: this.director_approval,
+            remarks: this.remarks,
         };
 
         // Add published field if it's defined
@@ -287,6 +293,7 @@ class CriteriaTableSchema {
         const director_approval = 'director_approval';
         const type = 'type';
         const published = 'published';
+        const remarks = 'remarks';
         const alias = {
             id: 'id',
             category: 'category',
@@ -296,6 +303,7 @@ class CriteriaTableSchema {
             director_approval: 'director_approval',
             type: 'type',
             published: 'published',
+            remarks: 'remarks',
         };
 
         // Define getter methods for the table schema properties
@@ -308,6 +316,7 @@ class CriteriaTableSchema {
         this.getDirectorApproval = () => director_approval;
         this.getType = () => type;
         this.getPublished = () => published;
+        this.getRemarks = () => remarks;
         this.get_alias = function () {
             return Object.keys(alias).map((key) => `${key} as ${alias[key]}`);
         };
