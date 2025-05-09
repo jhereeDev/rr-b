@@ -102,4 +102,16 @@ router.delete(
     MemberController.deleteMember
 );
 
+/**
+ * Update member status
+ * @route   PATCH /api/members/:id/status
+ * @access  Private (Admin only)
+ */
+router.put(
+    '/:id/status',
+    authenticated,
+    checkAdminRole,
+    MemberController.updateMemberStatus
+);
+
 module.exports = router;

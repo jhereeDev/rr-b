@@ -67,42 +67,50 @@ class Member {
     }
   }
 
-  // Method to update a member's details
-  async update() {
-    try {
-      const memberEmployeeId = this.member_employee_id;
-      logger.info(`Updating member: ${memberEmployeeId} (${this.member_firstname} ${this.member_lastname})`);
-      
-      // Format title with proper capitalization
-      if (this.member_title) {
-        this.member_title = capitalizeEachWord(this.member_title);
-      }
-      
-      // Create update object with only fields to be updated
-      const updateData = { 
-        ...this,
-        updated_at: moment().format('YYYY-MM-DD HH:mm:ss')
-      };
-      
-      // Remove ID field as it shouldn't be updated
-      delete updateData.id;
-      
-      const result = await database(Member.tableName)
-        .where('member_employee_id', memberEmployeeId)
-        .update(updateData);
-
-      if (!result) {
-        throw new Error('Error updating member');
-      }
-
-      logger.info(`Successfully updated member: ${memberEmployeeId}`);
-      return this;
-    } catch (error) {
-      logger.error(`Error updating member ${this.member_employee_id}: ${error.message}`);
-      throw new Error(`Error updating member: ${error.message}`);
+  // Check this section in the update method inside the Member class
+async update() {
+  try {
+    const memberEmployeeId = this.member_employee_id;
+    logger.info(`Updating member: ${memberEmployeeId} (${this.member_firstname} ${this.member_lastname})`);
+    
+    // Format title with proper capitalization
+    if (this.member_title) {
+      this.member_title = capitalizeEachWord(this.member_title);
     }
-  }
+    
+    // Create update object with only fields to be updated
+    const updateData = { 
+      member_firstname: this.member_firstname,
+      member_lastname: this.member_lastname,
+      member_email: this.member_email,
+      member_title: this.member_title,
+      member_manager_id: this.member_manager_id,
+      member_director_id: this.member_director_id,
+      role_id: this.role_id,
+      member_status: this.member_status,
+      updated_at: moment().format('YYYY-MM-DD HH:mm:ss')
+    };
+    
+    // Remove undefined values
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) delete updateData[key];
+    });
+    
+    const result = await database(Member.tableName)
+      .where('member_employee_id', memberEmployeeId)
+      .update(updateData);
 
+    if (!result) {
+      throw new Error('Error updating member');
+    }
+
+    logger.info(`Successfully updated member: ${memberEmployeeId}`);
+    return this;
+  } catch (error) {
+    logger.error(`Error updating member ${this.member_employee_id}: ${error.message}`);
+    throw new Error(`Error updating member: ${error.message}`);
+  }
+}
   /**
    * Compare two member objects to check if their data is different
    * Returns true if there are differences, false if objects are identical
@@ -139,6 +147,31 @@ class Member {
     } catch (error) {
       logger.error(`Error in finding all members: ${error.message}`);
       throw new Error(`Error in finding all members: ${error.message}`);
+    }
+  }
+
+  // Method to find a member by their employee ID
+  static async findById(id) {
+    try {
+      if (!id) {
+        logger.warn('Member ID is required');
+        throw new Error('Member ID is required');
+      }
+
+      const member = await database(Member.tableName)
+        .where({
+          member_employee_id: id,
+        })
+        .first();
+
+      if (member) {
+        await this.getRelatedNames(member);
+      }
+
+      return member;
+    } catch (error) {
+      logger.error(`Error finding member by ID ${memberEmployeeId}: ${error.message}`);
+      throw new Error(`Error finding member by ID: ${error.message}`);
     }
   }
 

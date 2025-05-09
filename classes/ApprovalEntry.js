@@ -181,6 +181,7 @@ class ApprovalEntry {
         try {
             return this.fetchAndFormatEntries({
                 'rewardsentry.member_employee_id': member_employee_id,
+                
             });
         } catch (error) {
             console.error('Error finding approval entry by member ID:', error);

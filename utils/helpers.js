@@ -71,8 +71,7 @@ const generateSlug = (string) => {
     return ''; // Return an empty string or some default value
   }
 
-  const first10Chars = string.substring(0, 10); // Get first 10 characters
-  const slug = slugify(first10Chars, {
+  const slug = slugify(string, {
     lower: true,
     strict: true,
     trim: true,

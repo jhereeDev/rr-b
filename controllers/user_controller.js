@@ -4,6 +4,7 @@ const { Ldap } = require('../classes/Ldap');
 const asyncHandler = require('../middlewares/async');
 const log4js = require('../config/log4js_config');
 const ErrorResponse = require('../utils/error_response');
+const { capitalizeEachWord } = require('../utils/helpers');
 const logger = log4js.getLogger('userController');
 const LDAP_USERNAME = process.env.LDAP_USER;
 const LDAP_PASSWORD = process.env.LDAP_PASSWORD;

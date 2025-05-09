@@ -53,7 +53,7 @@ const searchObject = (
     const startTime = Date.now();
     logger.debug(`Starting LDAP search in ${dn} with filter: ${opts.filter}`);
     
-    // Perform the search with timeout tracking
+    // Perform the search
     client.search(dn, opts, function (err, res) {
       if (err) {
         logger.error(`LDAP search error: ${err.message}`);
@@ -74,17 +74,21 @@ const searchObject = (
           logger.debug(`Found entry: ${entry.object.cn}`);
         });
         
+        res.on('page', () => {});
+        res.on('searchReference', () => {});
+        
         res.on('error', function (err) {
           clearTimeout(timeoutId);
           logger.error(`LDAP search error event: ${err.message}`);
           reject(err);
         });
         
-        res.on('end', function (result) {
+        res.on('end', function () {
           clearTimeout(timeoutId);
           const duration = Date.now() - startTime;
           
           if (!hasRecord) {
+            console.log('No Record Found');
             logger.info(`No record found for search (${duration}ms): ${opts.filter}`);
             resolve('No Record Found');
           } else {

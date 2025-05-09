@@ -299,6 +299,56 @@ const MemberController = {
             data: members,
         });
     }),
+
+    /**
+     * @desc    Update member status
+     * @route   PATCH /api/members/:id/status
+     * @access  Private (Admin only)
+     */
+    updateMemberStatus: asyncHandler(async (req, res, next) => {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
+            
+            // Validate status
+            if (!status || !['ACTIVE', 'INACTIVE'].includes(status)) {
+                return next(new ErrorResponse('Invalid status value', 400));
+            }
+            
+            logger.info(`Attempting to update member status: ${id} - Status: ${status}`);
+            
+            // Check if member exists
+            const member = await Member.findById(id);
+            if (!member) {
+                logger.error(`Member not found with id ${id} during status update attempt`);
+                return next(new ErrorResponse(`Member not found with id ${id}`, 404));
+            }
+            
+            // Update the member status
+            const updatedMember = new Member({
+                ...member,
+                member_status: status
+            });
+            
+            await updatedMember.update();
+            
+            logger.info(`Member status updated: ${id} - Status: ${status}`);
+            
+            res.status(200).json({
+                success: true,
+                message: `Member status updated to ${status}`,
+                data: {
+                    id,
+                    status
+                }
+            });
+        } catch (error) {
+            logger.error(`Error updating member status for id ${req.params.id}: ${error.message}`);
+            return next(new ErrorResponse(`Failed to update member status: ${error.message}`, 500));
+        }
+    })
 };
+
+
 
 module.exports = MemberController;

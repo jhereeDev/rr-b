@@ -38,8 +38,8 @@ app.use(
         origin: process.env.CLIENT_URL,
         credentials: true,
         optionsSuccessStatus: 200,
-        methods: ['GET', 'POST', 'PUT', 'DELETE'], // Add the methods you need
-        allowedHeaders: ['Content-Type', 'Authorization'], // Add any custom headers you need
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Added PATCH method
+        allowedHeaders: ['Content-Type', 'Authorization'],
     })
 );
 

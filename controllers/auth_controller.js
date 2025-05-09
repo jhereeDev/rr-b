@@ -25,8 +25,10 @@ const authenticate = asyncHandler(async (req, res, next) => {
       let isAdmin = false;
       const validateAdmin = await Admin.findByEmail(email);
 
-      if(validateAdmin.role_id === 1){
-        isAdmin = true;
+      if(validateAdmin){
+        if(validateAdmin.role_id === 1){
+          isAdmin = true;
+        }
       }
   
       // Check if this is an admin login attempt
@@ -116,6 +118,14 @@ const authenticate = asyncHandler(async (req, res, next) => {
       }
   
       const result = await Ldap.searchByEmail(client, email);
+
+      console.log(result);
+  
+      // Check if extensionAttribute2 exists in the LDAP result
+      if (!result.extensionAttribute2) {
+        logger.error(`Employee ID (extensionAttribute2) missing in LDAP data for user: ${email}`);
+        return next(new ErrorResponse('User profile incomplete. Missing employee ID.', 400));
+      }
   
       let member = await Member.findByMemberId(result.extensionAttribute2);
   
@@ -150,6 +160,7 @@ const authenticate = asyncHandler(async (req, res, next) => {
         }
       });
     } catch (error) {
+      console.log(error);
       logger.error(`Authentication error for username: ${email}`, error);
       return next(new ErrorResponse('Authentication failed', 500));
     }
