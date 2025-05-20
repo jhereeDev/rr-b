@@ -5,6 +5,7 @@ const moment = require('moment');
 const { capitalizeEachWord } = require('../utils/helpers');
 const log4js = require('../config/log4js_config');
 const logger = log4js.getLogger('member');
+const { getFiles } = require('../utils/file_getter');
 
 // Define the Member class
 class Member {
@@ -183,6 +184,31 @@ class Member {
 		} catch (error) {
 			logger.error(`Error in finding all members: ${error.message}`);
 			throw new Error(`Error in finding all members: ${error.message}`);
+		}
+	}
+
+	// Method to find a member by their employee ID
+	static async findByDatabaseId(id) {
+		try {
+			if (!id) {
+				logger.warn('Member ID is required');
+				throw new Error('Member ID is required');
+			}
+
+			const member = await database(Member.tableName)
+				.where({
+					id: id,
+				})
+				.first();
+
+			if (member) {
+				await this.getRelatedNames(member);
+			}
+
+			return member;
+		} catch (error) {
+			logger.error(`Error finding member by ID ${memberEmployeeId}: ${error.message}`);
+			throw new Error(`Error finding member by ID: ${error.message}`);
 		}
 	}
 

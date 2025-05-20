@@ -1,6 +1,6 @@
-const { database } = require('../config/db_config');
-const { getFiles, formattedFiles } = require('../utils/file_getter');
-const { formattedDate } = require('../utils/helpers');
+const { database } = require("../config/db_config");
+const { getFiles, formattedFiles } = require("../utils/file_getter");
+const { formattedDate } = require("../utils/helpers");
 
 // Define the RewardPoints class
 class RewardPoints {
@@ -30,21 +30,21 @@ class RewardPoints {
   }
 
   static get tableName() {
-    return 'rewardsentry';
+    return "rewardsentry";
   }
 
   static get columns() {
     return [
-      'id',
-      'member_employee_id',
-      'short_description',
-      'criteria_id',
-      'date_accomplished',
-      'race_season',
-      'cbps_group',
-      'project_name',
-      'notes',
-      'attachments',
+      "id",
+      "member_employee_id",
+      "short_description",
+      "criteria_id",
+      "date_accomplished",
+      "race_season",
+      "cbps_group",
+      "project_name",
+      "notes",
+      "attachments",
     ];
   }
 
@@ -66,7 +66,7 @@ class RewardPoints {
       ) {
         data.attachments = this.attachments
           .map((file) => file.filename)
-          .join(';');
+          .join(";");
       } else {
         delete data.attachments; // Remove attachments if no files
       }
@@ -79,7 +79,7 @@ class RewardPoints {
       this.id = id;
       return this;
     } catch (error) {
-      console.error('Error in RewardPoints.create:', error);
+      console.error("Error in RewardPoints.create:", error);
       throw new Error(
         `Error in creating reward points entry: ${error.message}`
       );
@@ -90,14 +90,21 @@ class RewardPoints {
   static async findByEmployeeId(memberEmployeeId) {
     try {
       const entries = await database(RewardPoints.tableName).where(
-        'member_employee_id',
+        "member_employee_id",
         memberEmployeeId
       );
 
-      return RewardPoints.processAttachments(entries);
+      // Process attachments for proper display
+      let rewardPoints = RewardPoints.processAttachments(entries);
+
+      if (rewardPoints.length > 0) {
+        return rewardPoints;
+      } else {
+        return null;
+      }
     } catch (error) {
       console.error(
-        'Error in finding reward points entry by employee ID',
+        "Error in finding reward points entry by employee ID",
         error
       );
       throw new Error(
@@ -110,12 +117,12 @@ class RewardPoints {
   static async findById(id) {
     try {
       const entry = await database(RewardPoints.tableName)
-        .where('id', id)
+        .where("id", id)
         .first();
 
       return entry ? RewardPoints.processAttachments([entry])[0] : null;
     } catch (error) {
-      console.error('Error in finding reward points entry by ID', error);
+      console.error("Error in finding reward points entry by ID", error);
       throw new Error(
         `Error in finding reward points entry by ID: ${error.message}`
       );
@@ -128,7 +135,7 @@ class RewardPoints {
       const entries = await database(RewardPoints.tableName);
       return RewardPoints.processAttachments(entries);
     } catch (error) {
-      console.error('Error in RewardPoints.findAll:', error);
+      console.error("Error in RewardPoints.findAll:", error);
       throw new Error(`Failed to fetch all reward points: ${error.message}`);
     }
   }
@@ -147,18 +154,18 @@ class RewardPoints {
       if (attachments) {
         const newAttachments = attachments
           .map((file) => file.filename)
-          .join(';');
+          .join(";");
         updateData.attachments = newAttachments;
       }
 
       // Remove 'files' property as it's not a database column
       delete data.files;
 
-      await database(RewardPoints.tableName).where('id', id).update(updateData);
+      await database(RewardPoints.tableName).where("id", id).update(updateData);
 
       return this.findById(id);
     } catch (error) {
-      console.error('Error in updating reward points entry', error);
+      console.error("Error in updating reward points entry", error);
       throw new Error(
         `Error in updating reward points entry: ${error.message}`
       );
@@ -168,16 +175,16 @@ class RewardPoints {
   // Method to delete reward points entry by their ID
   static async delete(id) {
     try {
-      return await database(RewardPoints.tableName).where('id', id).delete();
+      return await database(RewardPoints.tableName).where("id", id).delete();
     } catch (error) {
-      console.error('Error in deleting reward points entry', error);
+      console.error("Error in deleting reward points entry", error);
     }
   }
 
   // Method to find by race season
   static async findByRaceSeason(raceSeason) {
     const entries = await database(RewardPoints.tableName).where(
-      'race_season',
+      "race_season",
       raceSeason
     );
 
@@ -188,14 +195,14 @@ class RewardPoints {
   static async findByCbpsGroup(cbpsGroup) {
     try {
       const entries = await database(RewardPoints.tableName).where(
-        'cbps_group',
+        "cbps_group",
         cbpsGroup
       );
 
       return RewardPoints.processAttachments(entries);
     } catch (error) {
       console.error(
-        'Error in finding reward points entry by CBPS group',
+        "Error in finding reward points entry by CBPS group",
         error
       );
       throw new Error(
@@ -207,10 +214,23 @@ class RewardPoints {
   static processAttachments(entries) {
     return entries.map((entry) => {
       if (entry.attachments) {
-        entry.files = formattedFiles(entry.attachments);
-        entry.attachments = getFiles(entry);
+        // First save the original string value
+        const attachmentsString = entry.attachments;
+
+        // Format files from the string
+        entry.files = formattedFiles(attachmentsString);
+
+        // Get file objects with details from the filesystem
+        const filesWithDetails = getFiles(entry);
+
+        // Make sure we're setting the attachments directly to the array
+        // and not preserving any reference to the original attachments string
+        entry.attachments = Array.isArray(filesWithDetails)
+          ? filesWithDetails
+          : [];
       } else {
-        delete entry.attachments;
+        // Consistently set to null instead of deleting the property
+        entry.attachments = null;
       }
       return entry;
     });

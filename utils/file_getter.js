@@ -1,6 +1,6 @@
-const path = require('path');
-const fs = require('fs');
-const { generateSlug } = require('./helpers');
+const path = require("path");
+const fs = require("fs");
+const { generateSlug } = require("./helpers");
 
 const getFiles = (rewardEntry) => {
   try {
@@ -8,7 +8,7 @@ const getFiles = (rewardEntry) => {
     const entryName = generateSlug(rewardEntry.project_name);
 
     // **Important Change:** Use a static base path for security
-    const uploadDir = path.join(__dirname, '..', 'uploads');
+    const uploadDir = path.join(__dirname, "..", "uploads");
     const projectDir = path.join(uploadDir, memberId, entryName);
 
     if (!fs.existsSync(projectDir)) {
@@ -21,7 +21,7 @@ const getFiles = (rewardEntry) => {
       const stats = fs.statSync(filePath);
 
       // **Crucial Change:** Construct a URL for the frontend
-      const fileUrl = path.join(memberId, entryName, file).replace(/\\/g, '/'); // Store relative path with forward slashes
+      const fileUrl = path.join(memberId, entryName, file).replace(/\\/g, "/"); // Store relative path with forward slashes
 
       return {
         filename: file,
@@ -32,14 +32,14 @@ const getFiles = (rewardEntry) => {
 
     return fileInfo;
   } catch (error) {
-    console.error('Error getting files:', error); // Log errors for debugging
+    console.error("Error getting files:", error); // Log errors for debugging
     return []; // Return empty array to handle errors gracefully
   }
 };
 
 // Format files by split by ';' and map to object
 const formattedFiles = (files) => {
-  return files.split(';').map((file) => {
+  return files.split(";").map((file) => {
     return {
       filename: file,
     };

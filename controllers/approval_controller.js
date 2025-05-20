@@ -1,13 +1,13 @@
-const ApprovalEntry = require('../classes/ApprovalEntry');
-const asyncHandler = require('../middlewares/async');
-const ErrorResponse = require('../utils/error_response');
-const Leaderboard = require('../classes/Leaderboard');
-const { Mailer } = require('../classes/Mailer');
-const Member = require('../classes/Members');
-const RewardPoints = require('../classes/RewardPoints');
-const { capitalize } = require('../utils/helpers');
-const log4js = require('../config/log4js_config');
-const logger = log4js.getLogger('approvalController'); // Logger for auth controller
+const ApprovalEntry = require("../classes/ApprovalEntry");
+const asyncHandler = require("../middlewares/async");
+const ErrorResponse = require("../utils/error_response");
+const Leaderboard = require("../classes/Leaderboard");
+const { Mailer } = require("../classes/Mailer");
+const Member = require("../classes/Members");
+const RewardPoints = require("../classes/RewardPoints");
+const { capitalize } = require("../utils/helpers");
+const log4js = require("../config/log4js_config");
+const logger = log4js.getLogger("approvalController"); // Logger for auth controller
 
 // @desc Get rewards entry for approval of current user
 // @route GET /api/approval/me
@@ -28,7 +28,7 @@ const getApprovalById = asyncHandler(async (req, res, next) => {
 
   if (!response) {
     logger.error(`No data found with this id: ${id}`);
-    return next(new ErrorResponse('No data found with this id', 404));
+    return next(new ErrorResponse("No data found with this id", 404));
   }
 
   if (response.manager_id) {
@@ -37,7 +37,7 @@ const getApprovalById = asyncHandler(async (req, res, next) => {
     const managerData = await Member.findByMemberId(response.manager_id);
 
     response[
-      'manager_name'
+      "manager_name"
     ] = `${managerData.member_firstname} ${managerData.member_lastname}`;
   }
 
@@ -46,7 +46,7 @@ const getApprovalById = asyncHandler(async (req, res, next) => {
   const directorData = await Member.findByMemberId(response.director_id);
 
   response[
-    'director_name'
+    "director_name"
   ] = `${directorData.member_firstname} ${directorData.member_lastname}`;
 
   res.status(200).json(response);
@@ -98,7 +98,7 @@ const approveEntryManager = asyncHandler(async (req, res, next) => {
   const { manager_notes } = req.body;
   const managerId = req.userData.member_employee_id;
   const directorId = req.userData.member_manager_id;
-  const status = approve === 'true' ? 'approved' : 'rejected';
+  const status = approve === "true" ? "approved" : "rejected";
 
   const checkEntry = await ApprovalEntry.findById(id);
 
@@ -108,26 +108,26 @@ const approveEntryManager = asyncHandler(async (req, res, next) => {
   await ApprovalEntry.managerApproval(id, managerId, status, manager_notes);
 
   // Send email to director for approval if manager approved the entry
-  if (status === 'approved') {
-    if (checkEntry.director_approval_status === 'pending') {
+  if (status === "approved") {
+    if (checkEntry.director_approval_status === "pending") {
       // Get the member manager's email
       const director = await Member.findByMemberId(directorId);
       const mailer = new Mailer({
         to: [director.member_email],
         subject: `Reward Points Entry Approval Request for ${rewardPoints.project_name}`,
         fullname: `${req.userData.member_firstname} ${req.userData.member_lastname}`,
-        role: 'Director',
+        role: "Director",
         rewardPoints: rewardPoints.project_name,
         link: `${process.env.CLIENT_URL}/director-approval`,
       });
 
       await mailer.send();
-    } else if (checkEntry.director_approval_status === 'approved') {
+    } else if (checkEntry.director_approval_status === "approved") {
       await Leaderboard.findByEmployeeId(
         checkEntry.rewards_entry.member_employee_id
       ).then((leaderboard) => {
         if (!leaderboard) {
-          throw new ErrorResponse('Leaderboard record not found', 404);
+          throw new ErrorResponse("Leaderboard record not found", 404);
         }
         return new Leaderboard(leaderboard).approvePoints(
           checkEntry.rewards_entry.criteria_id,
@@ -142,9 +142,9 @@ const approveEntryManager = asyncHandler(async (req, res, next) => {
       const mailer = new Mailer({
         to: [member.member_email],
         subject: `Reward Points Entry Approved for ${rewardPoints.project_name}`,
-        role: 'Partner',
+        role: "Partner",
         status,
-        purpose: 'approval',
+        purpose: "approval",
         link: `${process.env.CLIENT_URL}/my-reward-points`,
       });
 
@@ -155,9 +155,9 @@ const approveEntryManager = asyncHandler(async (req, res, next) => {
       checkEntry.rewards_entry.member_employee_id
     ).then((leaderboard) => {
       if (!leaderboard) {
-        throw new ErrorResponse('Leaderboard record not found', 404);
+        throw new ErrorResponse("Leaderboard record not found", 404);
       }
-      if (checkEntry.director_approval_status === 'rejected') {
+      if (checkEntry.director_approval_status === "rejected") {
         return;
       } else {
         return new Leaderboard(leaderboard).approvePoints(
@@ -172,8 +172,8 @@ const approveEntryManager = asyncHandler(async (req, res, next) => {
     const mailer = new Mailer({
       to: [member.member_email],
       subject: `Reward Points Entry Rejected for ${rewardPoints.project_name}`,
-      role: 'Partner',
-      purpose: 'approval',
+      role: "Partner",
+      purpose: "approval",
       status,
       link: `${process.env.CLIENT_URL}/my-reward-points`,
     });
@@ -194,7 +194,7 @@ const approveEntryDirector = asyncHandler(async (req, res, next) => {
   const { approve } = req.query;
   const { director_notes } = req.body;
   const directorId = req.userData.member_employee_id;
-  const status = approve === 'true' ? 'approved' : 'rejected';
+  const status = approve === "true" ? "approved" : "rejected";
 
   const checkEntry = await ApprovalEntry.findById(id);
 
@@ -210,14 +210,14 @@ const approveEntryDirector = asyncHandler(async (req, res, next) => {
     subject: `Reward Points Entry ${capitalize(status)} for ${
       rewardPoints.project_name
     }`,
-    purpose: 'approval',
+    purpose: "approval",
     status,
   };
 
   if (member.role_id === 5) {
     // Check if the member is a manager
     mailerData.to = [member.member_email];
-    mailerData.role = 'Manager';
+    mailerData.role = "Manager";
 
     mailerData.link = `${process.env.CLIENT_URL}/my-reward-points`;
   } else {
@@ -225,14 +225,14 @@ const approveEntryDirector = asyncHandler(async (req, res, next) => {
     const manager = await Member.findByMemberId(member.member_manager_id);
 
     mailerData.to =
-      status === 'approved' ? [member.member_email] : [manager.member_email];
+      status === "approved" ? [member.member_email] : [manager.member_email];
 
-    mailerData.role = status === 'approved' ? 'Partner' : 'Manager';
-    if (status === 'approved') mailerData.cc = [manager.member_email];
+    mailerData.role = status === "approved" ? "Partner" : "Manager";
+    if (status === "approved") mailerData.cc = [manager.member_email];
     else mailerData.cc = [member.member_email];
 
     mailerData.link =
-      status === 'approved'
+      status === "approved"
         ? `${process.env.CLIENT_URL}/my-reward-points`
         : `${process.env.CLIENT_URL}/declined-entries`;
   }
@@ -244,8 +244,9 @@ const approveEntryDirector = asyncHandler(async (req, res, next) => {
     checkEntry.rewards_entry.member_employee_id
   ).then((leaderboard) => {
     if (!leaderboard) {
-      throw new ErrorResponse('Leaderboard record not found', 404);
+      throw new ErrorResponse("Leaderboard record not found", 404);
     }
+
     return new Leaderboard(leaderboard).approvePoints(
       checkEntry.rewards_entry.criteria_id,
       checkEntry.rewards_entry.id,

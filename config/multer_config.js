@@ -1,7 +1,7 @@
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-const { generateSlug, generateFY } = require('../utils/helpers');
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+const { generateSlug, generateFY } = require("../utils/helpers");
 
 // Multer Storage Configuration
 const storage = multer.diskStorage({
@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
         projectSlug = generateSlug(req.body.project_name);
       }
 
-      const employeeDir = path.join(__dirname, '..', 'uploads', employeeId);
+      const employeeDir = path.join(__dirname, "..", "uploads", employeeId);
       const rewardsDir = path.join(employeeDir, projectSlug);
 
       fs.mkdirSync(employeeDir, { recursive: true });

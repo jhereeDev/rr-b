@@ -11,9 +11,6 @@ const { authenticated, checkRole, checkAdminRole } = require('../middlewares/aut
 // Create and manage members (Admin/Super Admin only)
 router.post('/', authenticated, checkAdminRole, MemberController.createMember);
 
-// Create member by email (Admin/Super Admin only)
-router.post('/by-email', authenticated, checkAdminRole, MemberController.createMemberByEmail);
-
 // Get all members (Admin/Super Admin only)
 router.get('/', authenticated, checkAdminRole, MemberController.getAllMembers);
 
@@ -38,22 +35,27 @@ router.get('/by-director', authenticated, checkRole([1, 4]), MemberController.ge
 // Hide popup for current user
 router.post('/hide-popup', authenticated, checkRole([4, 5, 6]), MemberController.hidePopup);
 
+// Get detailed member information (Admin/Super Admin only)
+router.get('/details/:id', authenticated, checkAdminRole, MemberController.getMemberDetails);
+
+// Get member reward entries (Admin/Super Admin only)
+router.get('/details/:id/rewards', authenticated, checkAdminRole, MemberController.getMemberRewardEntries);
+
+// Update a specific reward entry (Admin/Super Admin only)
+router.put('/details/:id/rewards/:rewardId', authenticated, checkAdminRole, MemberController.updateRewardEntry);
+
 // Individual member CRUD operations
 router.get(
 	'/:id',
 	authenticated,
-	MemberController.getMemberById // Allow any authenticated user to get member by ID
+	MemberController.getMemberById
 );
 
 router.put('/:id', authenticated, checkAdminRole, MemberController.updateMember);
 
 router.delete('/:id', authenticated, checkAdminRole, MemberController.deleteMember);
 
-/**
- * Update member status
- * @route   PATCH /api/members/:id/status
- * @access  Private (Admin only)
- */
+// Update member status
 router.put('/:id/status', authenticated, checkAdminRole, MemberController.updateMemberStatus);
 
 module.exports = router;

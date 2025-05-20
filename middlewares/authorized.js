@@ -1,26 +1,35 @@
-const ApprovalEntry = require('../classes/ApprovalEntry');
-const RewardPoints = require('../classes/RewardPoints');
-const Member = require('../classes/Members');
-const ErrorResponse = require('../utils/error_response');
+const ApprovalEntry = require("../classes/ApprovalEntry");
+const RewardPoints = require("../classes/RewardPoints");
+const Member = require("../classes/Members");
+const ErrorResponse = require("../utils/error_response");
 
 // Check if the current user owns or is the manager of the reward points
 const IsOwnerOfRewardPoints = async (req, res, next) => {
   const { id } = req.params;
   const employeeId = req.userData.member_employee_id;
 
-  const checkRewardPoints = await RewardPoints.findById(id);
+  const checkApprovalEntry = await ApprovalEntry.findById(id);
+
+  if (!checkApprovalEntry) {
+    return next(new ErrorResponse("Reward points not found", 404));
+  }
 
   const member = await Member.findByMemberId(
-    checkRewardPoints.member_employee_id
+    checkApprovalEntry.rewards_entry.member_employee_id
   );
 
   // Check if the current user is the owner or manager of the reward points
   if (
-    checkRewardPoints.member_employee_id !== member.member_employee_id &&
+    checkApprovalEntry.rewards_entry.member_employee_id !==
+      member.member_employee_id &&
     member.member_manager_id !== employeeId
   ) {
-    return next(new ErrorResponse('Unauthorized to this request', 401));
+    return next(new ErrorResponse("Unauthorized to this request", 401));
   }
+
+  req.originalMemberId = checkApprovalEntry.rewards_entry.member_employee_id;
+  req.originalProjectName = checkApprovalEntry.rewards_entry.project_name;
+  req.rewards_entry = checkApprovalEntry.rewards_entry;
 
   return next();
 };
@@ -33,7 +42,7 @@ const IsManagerOfMember = async (req, res, next) => {
   const checkEntry = await ApprovalEntry.findById(id);
 
   if (checkEntry.manager_id !== managerId) {
-    return next(new ErrorResponse('Unauthorized to this request', 401));
+    return next(new ErrorResponse("Unauthorized to this request", 401));
   }
 
   return next();
@@ -48,7 +57,7 @@ const IsDirectorOfMember = async (req, res, next) => {
     const checkEntry = await ApprovalEntry.findById(id);
 
     if (checkEntry.director_id !== directorId) {
-      return next(new ErrorResponse('Unauthorized to this request', 401));
+      return next(new ErrorResponse("Unauthorized to this request", 401));
     }
 
     return next();
