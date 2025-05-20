@@ -10,6 +10,7 @@ const { LDAP_Connection } = require("../config/ldap_config");
 const RewardPoints = require("../classes/RewardPoints");
 const { database } = require("../config/db_config");
 const ApprovalEntry = require("../classes/ApprovalEntry");
+const ExcelJS = require("exceljs");
 
 /**
  * Enhanced Member Controller
@@ -718,6 +719,115 @@ const MemberController = {
       return next(
         new ErrorResponse(
           `Failed to update reward entry: ${error.message}`,
+          500
+        )
+      );
+    }
+  }),
+
+  /**
+   * @desc    Export members list to Excel
+   * @route   GET /api/members/export
+   * @access  Private (Admin only)
+   */
+  exportMembers: asyncHandler(async (req, res, next) => {
+    try {
+      // Get excluded member IDs from environment variable
+      const excludedMemberIds = process.env.TEST_MEMBER_USERNAME
+        ? process.env.TEST_MEMBER_USERNAME.split(",").map((id) => id.trim())
+        : [];
+
+      logger.info(
+        `Excluding member IDs from export: ${excludedMemberIds.join(", ")}`
+      );
+
+      // Get all members with their manager and director information
+      const members = await database("members")
+        .select(
+          "members.member_employee_id",
+          "members.member_username",
+          "members.member_firstname",
+          "members.member_lastname",
+          "members.member_email",
+          "members.member_title",
+          "manager.member_firstname as manager_firstname",
+          "manager.member_lastname as manager_lastname",
+          "director.member_firstname as director_firstname",
+          "director.member_lastname as director_lastname"
+        )
+        .leftJoin(
+          "members as manager",
+          "members.member_manager_id",
+          "manager.member_employee_id"
+        )
+        .leftJoin(
+          "members as director",
+          "members.member_director_id",
+          "director.member_employee_id"
+        )
+        .where("members.member_status", "ACTIVE")
+        .whereNotIn("members.member_username", excludedMemberIds);
+
+      // Format the data for Excel
+      const formattedData = members.map((member) => ({
+        "Member Employee ID": member.member_employee_id,
+        "First Name": member.member_firstname,
+        "Last Name": member.member_lastname,
+        Email: member.member_email,
+        "Job Title": member.member_title,
+        "Manager Name":
+          member.manager_firstname && member.manager_lastname
+            ? `${member.manager_firstname} ${member.manager_lastname}`
+            : "N/A",
+        "Director Name":
+          member.director_firstname && member.director_lastname
+            ? `${member.director_firstname} ${member.director_lastname}`
+            : "N/A",
+      }));
+
+      // Set response headers for Excel download
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=members_list.xlsx"
+      );
+
+      // Create Excel workbook
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Members List");
+
+      // Add headers
+      const headers = Object.keys(formattedData[0]);
+      worksheet.addRow(headers);
+
+      // Add data rows
+      formattedData.forEach((member) => {
+        worksheet.addRow(Object.values(member));
+      });
+
+      // Style the header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
+
+      // Auto-fit columns
+      worksheet.columns.forEach((column) => {
+        column.width = 20;
+      });
+
+      // Write to response
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      logger.error(`Error exporting members list: ${error.message}`);
+      return next(
+        new ErrorResponse(
+          `Failed to export members list: ${error.message}`,
           500
         )
       );
