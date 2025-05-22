@@ -15,20 +15,29 @@ const getFiles = (rewardEntry) => {
       return []; // Return an empty array if no files exist
     }
 
+    // Get the list of attachment filenames from rewardEntry
+    const attachmentFiles = rewardEntry.attachments
+      ? rewardEntry.attachments.split(";")
+      : [];
+
     const files = fs.readdirSync(projectDir);
-    const fileInfo = files.map((file) => {
-      const filePath = path.join(projectDir, file);
-      const stats = fs.statSync(filePath);
+    const fileInfo = files
+      .filter((file) => attachmentFiles.includes(file))
+      .map((file) => {
+        const filePath = path.join(projectDir, file);
+        const stats = fs.statSync(filePath);
 
-      // **Crucial Change:** Construct a URL for the frontend
-      const fileUrl = path.join(memberId, entryName, file).replace(/\\/g, "/"); // Store relative path with forward slashes
+        // **Crucial Change:** Construct a URL for the frontend
+        const fileUrl = path
+          .join(memberId, entryName, file)
+          .replace(/\\/g, "/"); // Store relative path with forward slashes
 
-      return {
-        filename: file,
-        path: fileUrl, // Provide the URL instead of absolute path
-        size: stats.size,
-      };
-    });
+        return {
+          filename: file,
+          path: fileUrl, // Provide the URL instead of absolute path
+          size: stats.size,
+        };
+      });
 
     return fileInfo;
   } catch (error) {
